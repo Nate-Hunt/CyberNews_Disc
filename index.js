@@ -1,39 +1,79 @@
 // Require the necessary discord.js classes
+
+const axios = require('axios');
+
+async function fetchStory()
+{
+	try
+	{
+		//Accessing recent news stories
+		const response = await axios.get('https://hacker-news.firebaseio.com/v0/newstories.json');
+		const storyIDs = response.data;
+
+		//Fetching stories via IDs
+		for (const storyID of storyIDs)
+		{
+			const storyResponse = await axios.get(`https://hacker-news.firebaseio.com/v0/item/${storyID}.json`);
+			const storyData = storyResponse.data;
+
+			//Fetching the title, uri, and text for each new story
+			const storyTitle = storyData.title;
+			const storyLink = storyData.url;
+			const storyText = storyData.text;
+			const dataType = storyData.type;
+
+			const postChannel = client.channels.cache.get('1129288152549437472')
+			postChannel.send(`**Title:**\n${storyTitle}\n\n**Text:**\n${storyText}\n\n**Link:**${storyLink}\n\n**Type:**\n${dataType}`);
+		}
+
+	}
+
+	catch (error)
+	{
+		console.error('Error finding stories:', error);
+	}
+}
+
+
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { token } = require('./config.json');
 
 // Create a new client instance
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-client.commands = new Collection();
-
-const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-
-for (const file of commandFiles)
+client.once('ready', () => 
 {
-	const filePath = path.join(commandsPath, file);
-	const command = require(filePath);
+	console.log('Logged in as ${client.user.tag}');
 
-	if('data' in command && 'execute' in command)
-	{
-		client.commands.set(command.data.name, command);
-	}
+	setInterval(fetchStory, 60000); //Run function every 60 secs
+});
 
-	else
-	{
-		console.log('[WARNING] The command at ${filePath} is missing a required "data" or "execute" property!');
-	}
+client.login(token);
 
-}
+// client.commands = new Collection();
+
+// const commandsPath = path.join(__dirname, 'commands');
+// const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+// for (const file of commandFiles)
+// {
+// 	const filePath = path.join(commandsPath, file);
+// 	const command = require(filePath);
+
+// 	if('data' in command && 'execute' in command)
+// 	{
+// 		client.commands.set(command.data.name, command);
+// 	}
+
+// 	else
+// 	{
+// 		console.log('[WARNING] The command at ${filePath} is missing a required "data" or "execute" property!');
+// 	}
+
+// }
 
 // When the client is ready, run this code (only once)
 // We use 'c' for the event parameter to keep it separate from the already defined 'client'
-client.once(Events.ClientReady, c => {
-	console.log(`Ready! Logged in as ${c.user.tag}`);
-});
-
-// Log in to Discord with your client's token
-client.login(token);
